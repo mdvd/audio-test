@@ -2543,7 +2543,7 @@ var WaveformPlaylist =
 	      var elapsed = currentTime - this.lastDraw;
 	
 	      if (this.isPlaying()) {
-	        var playbackSeconds = cursorPos + elapsed * this.playSpeed;
+					var playbackSeconds = cursorPos + elapsed * this.playSpeed;
 	        this.ee.emit('timeupdate', playbackSeconds);
 	        this.animationRequest = window.requestAnimationFrame(function () {
 	          _this14.updateEditor(playbackSeconds);
@@ -5236,30 +5236,28 @@ var WaveformPlaylist =
 	  function _class(playlist) {
 	    _classCallCheck(this, _class);
 	
-	    this.playlist = playlist;
+			this.playlist = playlist;
 	  }
 	
 	  _createClass(_class, [{
 	    key: 'hook',
 	    value: function hook(node) {
-	      var playlist = this.playlist;
+				var playlist = this.playlist;
 	      if (!playlist.isScrolling) {
-	        var el = node;
+					var el = node;
 	
 	        if (playlist.isAutomaticScroll && node.querySelector('.cursor')) {
-	          var rect = node.getBoundingClientRect();
-	          var cursorRect = node.querySelector('.cursor').getBoundingClientRect();
-	
+						var rect = node.getBoundingClientRect();
+						var cursorRect = node.querySelector('.cursor').getBoundingClientRect();
+						var controlWidth = playlist.controls.show ? playlist.controls.width : 0;
 	          if (cursorRect.right > rect.right || cursorRect.right < 0) {
-	            var controlWidth = playlist.controls.show ? playlist.controls.width : 0;
-	            var width = (0, _conversions.pixelsToSeconds)(rect.right - rect.left, playlist.samplesPerPixel, playlist.sampleRate);
-	            playlist.scrollLeft = Math.min(playlist.playbackSeconds, playlist.duration - (width - controlWidth));
-	          }
+							var width = (0, _conversions.pixelsToSeconds)(rect.right - rect.left, playlist.samplesPerPixel, playlist.sampleRate);
+							playlist.scrollLeft = Math.min(playlist.playbackSeconds, playlist.duration - (width - controlWidth));
+						}
 	        }
 	
-	        var left = (0, _conversions.secondsToPixels)(playlist.scrollLeft, playlist.samplesPerPixel, playlist.sampleRate);
-	
-	        el.scrollLeft = left;
+					var left = (0, _conversions.secondsToPixels)(playlist.scrollLeft, playlist.samplesPerPixel, playlist.sampleRate);
+					el.scrollLeft = left;
 	      }
 	    }
 	  }]);
@@ -5927,7 +5925,7 @@ var WaveformPlaylist =
 	    value: function renderOverlay(data) {
 	      var _this = this;
 	
-	      var channelPixels = (0, _conversions.secondsToPixels)(data.playlistLength, data.resolution, data.sampleRate);
+				var channelPixels = (0, _conversions.secondsToPixels)(data.playlistLength, data.resolution, data.sampleRate);
 	
 	      var config = {
 	        attributes: {
@@ -5989,14 +5987,25 @@ var WaveformPlaylist =
 	    key: 'render',
 	    value: function render(data) {
 	      var _this3 = this;
-	
-	      var width = this.peaks.length;
+				var width = this.peaks.length;
 	      var playbackX = (0, _conversions.secondsToPixels)(data.playbackSeconds, data.resolution, data.sampleRate);
 	      var startX = (0, _conversions.secondsToPixels)(this.startTime, data.resolution, data.sampleRate);
 	      var endX = (0, _conversions.secondsToPixels)(this.endTime, data.resolution, data.sampleRate);
 	      var progressWidth = 0;
 	      var numChan = this.peaks.data.length;
-	      var scale = window.devicePixelRatio;
+				var scale = window.devicePixelRatio;
+				var channelContainerNode = document.querySelector('.playlist-tracks')
+				var channelContainer = channelContainerNode.getBoundingClientRect()
+				var channelWrapperWidth = Math.round(channelContainer.width - data.controls.width)
+				var channelPositionStart = startX
+				var channelPosition = startX
+				if(playbackX > (channelWrapperWidth * 0.5)){
+					channelPosition = playbackX - (channelWrapperWidth * 0.5)
+				}
+
+				if(playbackX === (channelWrapperWidth * 0.5)) {
+					channelPositionStart = playbackX
+				}
 	
 	      if (playbackX > 0 && playbackX > startX) {
 	        if (playbackX < endX) {
@@ -6004,8 +6013,7 @@ var WaveformPlaylist =
 	        } else {
 	          progressWidth = width;
 	        }
-	      }
-	
+				}
 	      var waveformChildren = [(0, _h2.default)('div.cursor', {
 	        attributes: {
 	          style: 'position: absolute; width: 1px; margin: 0; padding: 0; top: 0; left: ' + playbackX + 'px; bottom: 0; z-index: 5;'
@@ -6072,7 +6080,9 @@ var WaveformPlaylist =
 	            },
 	            hook: new _FadeCanvasHook2.default(fadeOut.type, fadeOut.shape, fadeOut.end - fadeOut.start, data.resolution)
 	          })]));
-	        }
+					}
+					
+
 	
 	        return (0, _h2.default)('div.channel.channel-' + channelNum, {
 	          attributes: {
@@ -6090,14 +6100,22 @@ var WaveformPlaylist =
 	        var cEndX = (0, _conversions.secondsToPixels)(data.timeSelection.end, data.resolution, data.sampleRate);
 	        var cWidth = cEndX - cStartX + 1;
 	        var cClassName = cWidth > 1 ? '.segment' : '.point';
-	
+					
 	        waveformChildren.push((0, _h2.default)('div.selection' + cClassName, {
 	          attributes: {
 	            style: 'position: absolute; width: ' + cWidth + 'px; bottom: 0; top: 0; left: ' + cStartX + 'px; z-index: 4;'
 	          }
-	        }));
+					}));
 	      }
-	
+				if(progressWidth !== 0 && !playlist.isAutomaticScroll){
+					if(cStartX !==0 && cStartX < (channelContainerNode.scrollLeft + (channelWrapperWidth * 0.5))){
+						if(!(playbackX > cStartX && playbackX < (channelContainerNode.scrollLeft + (channelWrapperWidth * 0.5)))){
+							channelContainerNode.scrollLeft = channelPosition
+						}
+					} else {
+						channelContainerNode.scrollLeft = channelPosition
+					}
+				}
 	      var waveform = (0, _h2.default)('div.waveform', {
 	        attributes: {
 	          style: 'height: ' + numChan * data.height + 'px; position: relative;'
