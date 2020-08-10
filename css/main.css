@@ -96,6 +96,24 @@
 
 .track-drop.drag-enter { border: 2px solid orange; }
 
+.btn-loop-success {
+    color: #000;
+    background-color: rgba(255, 255, 255, 0.5);
+    border-color: #c4c4c4;
+}
+
+.btn-loop-success:hover {
+  color: #fff;
+  background-color: #5cb85c;
+  border-color: #4cae4c;
+}
+
+.active-btn {
+    color: #fff;
+    background-color: rgba(92, 184,92, 0.5);;
+    border-color: #4cae4c;
+}
+
 footer { margin-top: 2em; }
 
 /*# sourceMappingURL=main.css.map */

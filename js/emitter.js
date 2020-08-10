@@ -73,11 +73,9 @@ function cueFormatters(format) {
 function updateSelect(start, end) {
   if (start < end) {
     $('.btn-trim-audio').removeClass('disabled');
-    $('.btn-loop').removeClass('disabled');
   }
   else {
     $('.btn-trim-audio').addClass('disabled');
-    $('.btn-loop').addClass('disabled');
   }
 
   $audioStart.val(cueFormatters(format)(start));
@@ -96,6 +94,7 @@ function updateTime(time) {
 updateSelect(startTime, endTime);
 updateTime(audioPos);
 
+ee.emit("statechange", "select");
 
 
 /*
@@ -120,8 +119,15 @@ $container.on("click", ".btn-annotations-download", function() {
 });
 
 $container.on("click", ".btn-loop", function() {
-  isLooping = true;
-  playoutPromises = playlist.play(startTime, endTime);
+  if ($('.btn-loop').hasClass('active-btn')) {
+    $('.btn-loop').removeClass('active-btn');
+    isLooping = false;
+    playoutPromises = playlist.play(playlist.timeSelection.start, playlist.timeSelection.end);
+  } else {
+    $('.btn-loop').addClass('active-btn');
+    isLooping = true;
+    playoutPromises = playlist.play(playlist.timeSelection.start, playlist.timeSelection.end);
+  }
 });
 
 $container.on("click", ".btn-play", function() {
