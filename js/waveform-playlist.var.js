@@ -148,7 +148,9 @@ var WaveformPlaylist =
 	  playlist.setAnnotations(config.annotationList);
 	  playlist.isAutomaticScroll = config.isAutomaticScroll;
 	  playlist.isContinuousPlay = config.isContinuousPlay;
-	  playlist.linkedEndpoints = config.linkedEndpoints;
+		playlist.linkedEndpoints = config.linkedEndpoints;
+		playlist.startLoop = 0;
+		playlist.endLoop = 0;
 	
 	  // take care of initial virtual dom rendering.
 	  var tree = playlist.render();
@@ -7349,7 +7351,8 @@ var WaveformPlaylist =
 
 				} else{
 					e.preventDefault();
-	
+					playlist.startLoop = 0;
+					playlist.endLoop = 0;
 					var startX = e.offsetX;
 					var startTime = (0, _conversions.pixelsToSeconds)(startX, this.samplesPerPixel, this.sampleRate);
 					playlist.timeSelection.start = startTime
@@ -7400,6 +7403,8 @@ var WaveformPlaylist =
 			this.startMove = false;
 			this.endMove = false;
 			this.touchStartTime = 0;
+			this.startX = playlist.startLoop;
+			this.endX = playlist.endLoop;
 		}
 	
 	  _createClass(_class, [{
@@ -7416,7 +7421,6 @@ var WaveformPlaylist =
 				maxX === this.startX ? this.endX = minX : this.endX = maxX;
 	      var startTime = (0, _conversions.pixelsToSeconds)(minX, this.samplesPerPixel, this.sampleRate);
 				var endTime = (0, _conversions.pixelsToSeconds)(maxX, this.samplesPerPixel, this.sampleRate);
-				
 	      this.track.ee.emit('select', startTime, endTime, this.track);
 	    }
 	  }, {
@@ -7436,13 +7440,13 @@ var WaveformPlaylist =
 						var x = e.targetTouches[0].pageX - rect.left;
 						if(e.target.className === 'fa fa-repeat' || e.target.className === 'btn btn-default btn-loop btn-loop-success' || e.target.className === 'btn btn-default btn-loop btn-loop-success active-btn'){
 
-					} else if(this.startX !== this.endX && x >= (this.startX - 15) && x <= (this.startX + 15)){
+					} else if(playlist.startLoop !== playlist.endLoop && x >= (playlist.startLoop - 15) && x <= (playlist.startLoop + 15)){
 							e.preventDefault();
 							playlist.tracks.forEach((track) => {
 								var a = track.stateObj;
 								a.startMove = true;
 							})
-						} else if(this.startX !== this.endX && x >= (this.endX - 15) && x <= (this.endX + 15)){
+						} else if(playlist.startLoop !== playlist.endLoop && x >= (playlist.endLoop - 15) && x <= (playlist.endLoop + 15)){
 							e.preventDefault();
 							playlist.tracks.forEach((track) => {
 								var a = track.stateObj;
@@ -7499,18 +7503,22 @@ var WaveformPlaylist =
 					var rect = e.target.getBoundingClientRect();
 					var x = e.changedTouches[0].pageX - rect.left;
 					if (this.active) {
+						playlist.startLoop = this.startX;
+						playlist.endLoop = this.endX;
 						playlist.tracks.forEach((track) => {
 							var a = track.stateObj;
 							a.complete(x);
 						})
 					}
 					if(this.startMove){
+						playlist.startLoop = this.startX;
 						playlist.tracks.forEach((track) => {
 							var a = track.stateObj;
 							a.startMove = false
 						})
 					}
 					if(this.endMove){
+						playlist.endLoop = this.endX;
 						playlist.tracks.forEach((track) => {
 							var a = track.stateObj;
 							a.endMove = false
@@ -7523,13 +7531,13 @@ var WaveformPlaylist =
 	    value: function mousedown(e) {
 				if(e.target.className === 'fa fa-repeat' || e.target.className === 'btn btn-default btn-loop btn-loop-success' || e.target.className === 'btn btn-default btn-loop btn-loop-success active-btn'){
 
-				} else if(this.startX !== this.endX && e.offsetX >= (this.startX - 10) && e.offsetX <= (this.startX + 10)){
+				} else if(playlist.startLoop !== playlist.endLoop && e.offsetX >= (playlist.startLoop - 10) && e.offsetX <= (playlist.startLoop + 10)){
 					e.preventDefault();
 					playlist.tracks.forEach((track) => {
 						var a = track.stateObj;
 						a.startMove = true;
 					})
-				} else if(this.startX !== this.endX && e.offsetX >= (this.endX - 10) && e.offsetX <= (this.endX + 10)){
+				} else if(playlist.startLoop !== playlist.endLoop && e.offsetX >= (playlist.endLoop - 10) && e.offsetX <= (playlist.endLoop + 10)){
 					e.preventDefault();
 					playlist.tracks.forEach((track) => {
 						var a = track.stateObj;
@@ -7566,10 +7574,10 @@ var WaveformPlaylist =
 						a.emitSelection(a.startX, e.offsetX);
 					})
 				}
-				if(this.startX !== this.endX && e.offsetX >= (this.startX - 10) && e.offsetX <= (this.startX + 10)){
+				if(playlist.startLoop !== playlist.endLoop && e.offsetX >= (playlist.startLoop - 10) && e.offsetX <= (playlist.startLoop + 10)){
 					e.target.style.cursor = 'move'
 					
-				} else if(this.startX !== this.endX && e.offsetX >= (this.endX - 10) && e.offsetX <= (this.endX + 10)){
+				} else if(playlist.startLoop !== playlist.endLoop && e.offsetX >= (playlist.endLoop - 10) && e.offsetX <= (playlist.endLoop + 10)){
 					e.target.style.cursor = 'move'
 					
 				}
@@ -7579,18 +7587,23 @@ var WaveformPlaylist =
 	    value: function mouseup(e) {
 	      if (this.active) {
 					e.preventDefault();
+					playlist.startLoop = this.startX;
+					playlist.endLoop = this.endX;
 					playlist.tracks.forEach((track) => {
 						var a = track.stateObj;
 						a.complete(e.offsetX);
 					})
 				}
 				if(this.startMove){
+					
+					playlist.startLoop = this.startX;
 					playlist.tracks.forEach((track) => {
 						var a = track.stateObj;
 						a.startMove = false
 					})
 				}
 				if(this.endMove){
+					playlist.endLoop = this.endX;
 					playlist.tracks.forEach((track) => {
 						var a = track.stateObj;
 						a.endMove = false
