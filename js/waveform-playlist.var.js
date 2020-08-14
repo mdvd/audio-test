@@ -7419,6 +7419,8 @@ var WaveformPlaylist =
 	      var minX = Math.min(x, start);
 				var maxX = Math.max(x, start);
 				maxX === this.startX ? this.endX = minX : this.endX = maxX;
+				playlist.startLoop = this.startX;
+				playlist.endLoop = this.endX;
 	      var startTime = (0, _conversions.pixelsToSeconds)(minX, this.samplesPerPixel, this.sampleRate);
 				var endTime = (0, _conversions.pixelsToSeconds)(maxX, this.samplesPerPixel, this.sampleRate);
 	      this.track.ee.emit('select', startTime, endTime, this.track);
@@ -7503,22 +7505,18 @@ var WaveformPlaylist =
 					var rect = e.target.getBoundingClientRect();
 					var x = e.changedTouches[0].pageX - rect.left;
 					if (this.active) {
-						playlist.startLoop = this.startX;
-						playlist.endLoop = this.endX;
 						playlist.tracks.forEach((track) => {
 							var a = track.stateObj;
 							a.complete(x);
 						})
 					}
 					if(this.startMove){
-						playlist.startLoop = this.startX;
 						playlist.tracks.forEach((track) => {
 							var a = track.stateObj;
 							a.startMove = false
 						})
 					}
 					if(this.endMove){
-						playlist.endLoop = this.endX;
 						playlist.tracks.forEach((track) => {
 							var a = track.stateObj;
 							a.endMove = false
@@ -7587,38 +7585,36 @@ var WaveformPlaylist =
 	    value: function mouseup(e) {
 	      if (this.active) {
 					e.preventDefault();
-					playlist.startLoop = this.startX;
-					playlist.endLoop = this.endX;
 					playlist.tracks.forEach((track) => {
 						var a = track.stateObj;
 						a.complete(e.offsetX);
 					})
 				}
 				if(this.startMove){
-					
-					playlist.startLoop = this.startX;
 					playlist.tracks.forEach((track) => {
 						var a = track.stateObj;
 						a.startMove = false
 					})
 				}
 				if(this.endMove){
-					playlist.endLoop = this.endX;
 					playlist.tracks.forEach((track) => {
 						var a = track.stateObj;
 						a.endMove = false
 					})
 				}
 	    }
-	  }, {
-	    key: 'mouseleave',
-	    value: function mouseleave(e) {
-	      if (this.active) {
-	        e.preventDefault();
-	        this.complete(e.offsetX);
-	      }
-	    }
-	  }], [{
+		}
+		// {
+	  //   key: 'mouseleave',
+	  //   value: function mouseleave(e) {
+		// 		// console.log('test', e)
+	  //     if (this.active) {
+	  //       e.preventDefault();
+		// 			 this.complete(e.offsetX);
+	  //     }
+	  //   }
+		// }
+		], [{
 	    key: 'getClass',
 	    value: function getClass() {
 	      return '.state-select';
@@ -7626,7 +7622,7 @@ var WaveformPlaylist =
 	  }, {
 	    key: 'getEvents',
 	    value: function getEvents() {
-	      return ['mousedown', 'mousemove', 'mouseup', 'mouseleave', 'touchstart', 'mousemove', 'touchend', 'touchmove'];
+	      return ['mousedown', 'mousemove', 'mouseup', 'touchstart', 'mousemove', 'touchend', 'touchmove']; // 'mouseleave'
 	    }
 	  }]);
 	  return _class;
