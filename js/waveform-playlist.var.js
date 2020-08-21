@@ -2373,7 +2373,7 @@ var WaveformPlaylist =
 	      var playoutPromises = [];
 				
 				var start = this.pausedAt || selected.start || startTime || this.cursor;
-				if(selected.end !== selected.start && this.pausedAt > selected.end || this.pausedAt < selected.start){
+				if(selected.end !== selected.start){
 					start = selected.start
 				}
 				this.pausedAt = undefined;
