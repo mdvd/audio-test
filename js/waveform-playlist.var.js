@@ -2336,7 +2336,6 @@ var WaveformPlaylist =
 	    key: 'getCurrentTime',
 	    value: function getCurrentTime() {
 	      var cursorPos = this.lastSeeked || this.pausedAt || this.cursor;
-	
 	      return cursorPos + this.getElapsedTime();
 	    }
 	  }, {
@@ -2363,21 +2362,26 @@ var WaveformPlaylist =
 	  }, {
 	    key: 'play',
 	    value: function play(startTime, endTime) {
+				// console.log('startTime', startTime)
+				// console.log('endTime', endTime)
 				var _this7 = this;
-				var speed = this.playSpeed
+				var speed = this.playSpeed;
 	      clearTimeout(this.resetDrawTimer);
 	
 	      var currentTime = this.ac.currentTime;
 	      var selected = this.getTimeSelection();
 	      var playoutPromises = [];
-	
-	      var start = startTime || this.pausedAt || this.cursor;
+				
+				var start = this.pausedAt || selected.start || startTime || this.cursor;
+				if(selected.end !== selected.start && this.pausedAt > selected.end || this.pausedAt < selected.start){
+					start = selected.start
+				}
+				this.pausedAt = undefined;
 	      var end = endTime;
-	
+				// console.log('start', start)
 	      if (!end && selected.end !== selected.start && selected.end > start) {
 	        end = selected.end;
 	      }
-	
 	      if (this.isPlaying()) {
 	        return this.restartPlayFrom(start, end);
 	      }
@@ -2403,8 +2407,8 @@ var WaveformPlaylist =
 	      if (!this.isPlaying()) {
 	        return Promise.all(this.playoutPromises);
 	      }
-	
-	      this.pausedAt = this.getCurrentTime();
+				// this.pausedAt = this.getCurrentTime(); // original
+				this.pausedAt = this.playbackSeconds;
 	      return this.playbackReset();
 	    }
 	  }, {
@@ -2521,7 +2525,7 @@ var WaveformPlaylist =
 	      } else {
 	        // reset if it was paused.
 	        this.setActiveTrack(track || this.tracks[0]);
-	        this.pausedAt = start;
+	        // this.pausedAt = start;
 	        this.setTimeSelection(start, end);
 	        if (this.getSeekStyle() === 'fill') {
 	          this.playbackSeconds = start;
@@ -6124,6 +6128,7 @@ var WaveformPlaylist =
 						style: 'position: absolute; width: ' + cWidth + 'px; bottom: 0; top: 0; left: ' + cStartX + 'px; z-index: 4;'
 					}
 				})]);
+				// console.log(progressWidth)
 				if(progressWidth !== 0 && !playlist.isAutomaticScroll){
 					if(cStartX !==0 && cStartX < (channelContainerNode.scrollLeft + (channelWrapperWidth * 0.5))){
 						if(!(playbackX > cStartX && playbackX < (channelContainerNode.scrollLeft + (channelWrapperWidth * 0.5)))){
@@ -6132,6 +6137,10 @@ var WaveformPlaylist =
 					} else {
 						channelContainerNode.scrollLeft = channelPosition
 					}
+				}
+				if(progressWidth === cEndX && channelContainerNode.scrollLeft > cStartX){
+					// console.log(cEndX)
+					cStartX > 30 && channelContainerNode.scrollLeft > cStartX ? channelContainerNode.scrollLeft = cStartX - 30 : channelContainerNode.scrollLeft = 0
 				}
 	      var waveform = (0, _h2.default)('div.waveform', {
 	        attributes: {
@@ -7347,8 +7356,7 @@ var WaveformPlaylist =
 	  }, {
 	    key: 'click',
 	    value: function click(e) {
-				if(e.target.className === 'fa fa-repeat' || e.target.className === 'btn btn-default btn-loop btn-loop-success active-btn'){
-
+				if(e.target.className === 'fa fa-repeat' || e.target.className === 'btn btn-default btn-loop btn-loop-success active-btn' || e.target.className === 'btn btn-default btn-loop btn-loop-success'){
 				} else{
 					e.preventDefault();
 					playlist.startLoop = 0;
@@ -7466,6 +7474,10 @@ var WaveformPlaylist =
 						}
 					}
 				}, 500)
+				var startTime = (0, _conversions.pixelsToSeconds)(e.offsetX, this.samplesPerPixel, this.sampleRate);
+				if(playlist.pausedAt && playlist.pausedAt > startTime){
+					playlist.pausedAt = startTime
+				}
 			}
 	  }, {
 	    key: 'touchmove',
@@ -7527,8 +7539,8 @@ var WaveformPlaylist =
 	  }, {
 	    key: 'mousedown',
 	    value: function mousedown(e) {
-				if(e.target.className === 'fa fa-repeat' || e.target.className === 'btn btn-default btn-loop btn-loop-success' || e.target.className === 'btn btn-default btn-loop btn-loop-success active-btn'){
 
+				if(e.target.className === 'fa fa-repeat' || e.target.className === 'btn btn-default btn-loop btn-loop-success' || e.target.className === 'btn btn-default btn-loop btn-loop-success active-btn'){
 				} else if(playlist.startLoop !== playlist.endLoop && e.offsetX >= (playlist.startLoop - 10) && e.offsetX <= (playlist.startLoop + 10)){
 					e.preventDefault();
 					playlist.tracks.forEach((track) => {
@@ -7550,7 +7562,10 @@ var WaveformPlaylist =
 						var startTime = (0, _conversions.pixelsToSeconds)(a.startX, a.samplesPerPixel, a.sampleRate);
 						a.track.ee.emit('select', startTime, startTime, a.track);
 					})
-					
+					var startTime = (0, _conversions.pixelsToSeconds)(e.offsetX, this.samplesPerPixel, this.sampleRate);
+					if(playlist.pausedAt && playlist.pausedAt > startTime){
+						playlist.pausedAt = startTime
+					}
 				}
 	    }
 	  }, {

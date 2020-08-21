@@ -122,12 +122,25 @@ $container.on("click", ".btn-loop", function() {
   if ($('.btn-loop').hasClass('active-btn')) {
     $('.btn-loop').removeClass('active-btn');
     isLooping = false;
-    playoutPromises = playlist.play(playlist.timeSelection.start, playlist.timeSelection.end);
   } else {
     $('.btn-loop').addClass('active-btn');
     isLooping = true;
-    playoutPromises = playlist.play(playlist.timeSelection.start, playlist.timeSelection.end);
+    if(!playlist.isPlaying()){
+      playoutPromises = playlist.play(playlist.timeSelection.start, playlist.timeSelection.end);
+    }
   }
+});
+
+$container.on("keypress", function(event) {
+  if(event.keyCode === 32){
+    event.preventDefault()
+    if(!playlist.isPlaying()){
+      playlist.playSpeed === 1 ? ee.emit("play") : ee.emit("play-slow");
+    } else {
+      ee.emit("pause");
+    }
+  }
+  
 });
 
 $container.on("click", ".btn-play", function() {
@@ -139,12 +152,12 @@ $container.on("click", ".btn-play-slow", function() {
 });
 
 $container.on("click", ".btn-pause", function() {
-  isLooping = false;
+  // isLooping = false;
   ee.emit("pause");
 });
 
 $container.on("click", ".btn-stop", function() {
-  isLooping = false;
+  // isLooping = false;
   ee.emit("stop");
 });
 
@@ -390,8 +403,13 @@ ee.on('finished', function () {
   console.log("The cursor has reached the end of the selection !");
 
   if (isLooping) {
-    playoutPromises.then(function() {
-      playoutPromises = playlist.play(startTime, endTime);
-    });
+    if(!playoutPromises){
+      playoutPromises = playlist.play(playlist.timeSelection.start, playlist.timeSelection.end);
+      playlist.playSpeed === 1 ? ee.emit("play") : ee.emit("play-slow");
+    } else {
+      playoutPromises.then(function() {
+        playoutPromises = playlist.play(startTime, endTime);
+      });
+    }
   }
 });
