@@ -8,6 +8,8 @@ var $timeFormat = $container.find('.time-format');
 var $audioStart = $container.find('.audio-start');
 var $audioEnd = $container.find('.audio-end');
 var $time = $container.find('.audio-pos');
+var pitchValue = document.querySelector('.pitch-value');
+var speedValue = document.querySelector('.speed-value');
 
 var format = "hh:mm:ss.uuu";
 var startTime = 0;
@@ -293,6 +295,33 @@ $container.on("change", ".time-format", function(e) {
 
 $container.on("input change", ".master-gain", function(e){
   ee.emit("mastervolumechange", e.target.value);
+});
+
+$container.on("input change", ".master-pitch", function(e){
+  pitchValue.innerHTML = e.target.value;
+  // ee.emit("pitchchange", e.target.value);
+  playlist.pitchChange = false;
+  playlist.pitch = +e.target.value;
+
+  if(playlist.isPlaying()){
+    playlist.pitchChange = true;
+    ee.emit("play");
+  }
+});
+function getBaseLog(x, y) {
+  return Math.log(y) / Math.log(x);
+}
+$container.on("input change", ".master-speed", function(e){
+  speedValue.innerHTML = e.target.value;
+  // ee.emit("pitchchange", e.target.value);
+  playlist.speedChange = false;
+  playlist.playSpeed = e.target.value;
+  playlist.speedPitch = -1 * 12 * getBaseLog(2, e.target.value);
+
+  if(playlist.isPlaying()){
+    playlist.speedChange = true;
+    ee.emit("play");
+  }
 });
 
 $container.on("change", ".continuous-play", function(e){

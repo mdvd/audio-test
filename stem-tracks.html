@@ -46,11 +46,19 @@
   <div class="playlist-toolbar">
     <div class="btn-group">
       <span class="btn-pause btn btn-warning"><i class="fa fa-pause"></i></span>
-      <span class="btn-play btn btn-success"><i class="fa fa-play"></i> normal</span>
-      <span class="btn-play-slow btn btn-success"><i class="fa fa-play"></i> slow</span>
+      <span class="btn-play btn btn-success"><i class="fa fa-play"></i></span>
+      <!-- <span class="btn-play-slow btn btn-success"><i class="fa fa-play"></i> slow</span> -->
       <span class="btn-stop btn btn-danger"><i class="fa fa-stop"></i></span>
       <span class="btn-rewind btn btn-success"><i class="fa fa-fast-backward"></i></span>
       <span class="btn-fast-forward btn btn-success"><i class="fa fa-fast-forward"></i></span>
+    </div>
+    <div class="btn-group">
+      <label for="master-speed" class="speed-label">Speed: <b class="speed-value">1</b></label>
+      <input type="range" min="0.2" max="2" value="1" step="0.1" class="master-speed" id="master-speed">
+    </div>
+    <div class="btn-group">
+      <label for="master-pitch" class="pitch-label">Pitch: <b class="pitch-value">0</b></label>
+      <input type="range" min="-12" max="12" value="0" class="master-pitch" id="master-pitch">
     </div>
     <span class="audio-pos">00:00:00.0</span>
   </div>
@@ -85,7 +93,10 @@
 </footer>
 
 <script src="http://code.jquery.com/jquery-2.1.4.min.js"></script>
-<script type="text/javascript" src="js/waveform-playlist.var.js"></script>
+<!-- <script src="https://unpkg.com/tone@next/build/Tone.js"></script> -->
+<!-- <script src="js/wavesurfer.js"></script> -->
+<script src="js/pitch_new.js"></script>
+<script type="text/javascript" src="js/waveform-playlist.var_last-change.js"></script>
 <script type="text/javascript" src="js/stem-tracks.js"></script>
 <script type="text/javascript" src="js/emitter.js"></script>
 
