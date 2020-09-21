@@ -250,28 +250,32 @@ function PitchShift(audioContext){
 	}
 	
 	function getMultiplier(x){
+    return ((2 ** (x*0.0833333)) - 1) * 2
+  }
+
+	// function getMultiplier(x){
+	// 	console.log('pitch-value', x)
+	//   // don't ask...
+	//   if (x<0){
+	//     return x/12
+	//   } else {
+	//     var a5 = 1.8149080040913423e-7
+	//     var a4 = -0.000019413043101157434
+	//     var a3 = 0.0009795096626987743
+	//     var a2 = -0.014147877819596033
+	//     var a1 = 0.23005591195033048
+	//     var a0 = 0  //0.02278153473118749
 	
-	  // don't ask...
-	  if (x<0){
-	    return x/12
-	  } else {
-	    var a5 = 1.8149080040913423e-7
-	    var a4 = -0.000019413043101157434
-	    var a3 = 0.0009795096626987743
-	    var a2 = -0.014147877819596033
-	    var a1 = 0.23005591195033048
-	    var a0 = 0.02278153473118749
+	//     var x1 = x
+	//     var x2 = x*x
+	//     var x3 = x*x*x
+	//     var x4 = x*x*x*x
+	//     var x5 = x*x*x*x*x
 	
-	    var x1 = x
-	    var x2 = x*x
-	    var x3 = x*x*x
-	    var x4 = x*x*x*x
-	    var x5 = x*x*x*x*x
+	//     return a0 + x1*a1 + x2*a2 + x3*a3 + x4*a4 + x5*a5
+	//   }
 	
-	    return a0 + x1*a1 + x2*a2 + x3*a3 + x4*a4 + x5*a5
-	  }
-	
-	}
+	// }
 	
 	// include https://github.com/cwilso/Audio-Input-Effects/blob/master/js/jungle.js
 	
@@ -479,7 +483,7 @@ function PitchShift(audioContext){
 	
 	Jungle.prototype.setPitchOffset = function(mult) {
 		if (mult>0) { // pitch up
-			console.log('test-gain', this)
+			// console.log('test-gain', this)
 	    this.mod1Gain.gain.value = 0;
 	    this.mod2Gain.gain.value = 0;
 	    this.mod3Gain.gain.value = 1;

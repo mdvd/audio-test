@@ -1695,6 +1695,10 @@ var WaveformPlaylist =
 	  function _class() {
 	    _classCallCheck(this, _class);
 			this.playSpeed = 1;
+			this.speedChange = false;
+			this.speedPitch = 0;
+			this.pitch = 0;
+			this.pitchChange = false;
 	    this.tracks = [];
 	    this.soloedTracks = [];
 	    this.mutedTracks = [];
@@ -1903,13 +1907,12 @@ var WaveformPlaylist =
 	        _this2.record();
 	      });
 				
-				ee.on('play-slow', function (start, end) {
-					_this2.playSpeed = 0.5
-	        _this2.play(start, end);
-	      });
+				// ee.on('play-slow', function (start, end) {
+				// 	_this2.playSpeed = 0.5
+	      //   _this2.play(start, end);
+	      // });
 
 	      ee.on('play', function (start, end) {
-					_this2.playSpeed = 1
 	        _this2.play(start, end);
 	      });
 	
@@ -2379,6 +2382,10 @@ var WaveformPlaylist =
 				if(playlist.endLoop > playlist.startLoop){
 					start = selected.start
 				}
+				if(playlist.pitchChange || playlist.speedChange){
+					start = playlist.playbackSeconds;
+				}
+
 				this.pausedAt = undefined;
 	      var end = endTime;
 				// console.log('start', start)
@@ -2421,7 +2428,8 @@ var WaveformPlaylist =
 	        this.mediaRecorder.stop();
 	      }
 	
-	      this.pausedAt = undefined;
+				this.pausedAt = undefined;
+				playlist.pitchChange = false;
 	      this.playbackSeconds = 0;
 	      return this.playbackReset();
 	    }
@@ -5919,7 +5927,6 @@ var WaveformPlaylist =
 	      playoutSystem.setMasterGainLevel(options.masterGain);
 	      playoutSystem.setStereoPanValue(this.stereoPan);
 	      playoutSystem.play(when, start, duration, speed);
-	
 	      return sourcePromise;
 	    }
 	  }, {
@@ -8141,7 +8148,7 @@ var WaveformPlaylist =
 	  }, {
 	    key: 'setAudioContext',
 	    value: function setAudioContext(ac) {
-	      this.ac = ac;
+				this.ac = ac;
 	      this.ac.createStereoPanner = ac.createStereoPanner || ac.createPanner;
 	      this.destination = this.ac.destination;
 	    }
@@ -8150,8 +8157,7 @@ var WaveformPlaylist =
 	    value: function setUpSource() {
 	      var _this = this;
 	      this.source = this.ac.createBufferSource();
-	      this.source.buffer = this.buffer;
-	
+				this.source.buffer = this.buffer;
 	      var sourcePromise = new Promise(function (resolve) {
 	        // keep track of the buffer state.
 	        _this.source.onended = function () {
@@ -8159,6 +8165,7 @@ var WaveformPlaylist =
 	          _this.fadeGain.disconnect();
 	          _this.volumeGain.disconnect();
 	          _this.shouldPlayGain.disconnect();
+	          _this.pitchShift.disconnect();
 	          _this.panner.disconnect();
 	          _this.masterGain.disconnect();
 	
@@ -8166,12 +8173,13 @@ var WaveformPlaylist =
 	          _this.fadeGain = undefined;
 	          _this.volumeGain = undefined;
 	          _this.shouldPlayGain = undefined;
+	          _this.pitchShift = undefined;
 	          _this.panner = undefined;
 	          _this.masterGain = undefined;
 	
 	          resolve();
 	        };
-	      });
+				});
 	
 	      this.fadeGain = this.ac.createGain();
 	      // used for track volume slider
@@ -8180,15 +8188,55 @@ var WaveformPlaylist =
 	      this.shouldPlayGain = this.ac.createGain();
 	      this.masterGain = this.ac.createGain();
 	
-	      this.panner = this.ac.createStereoPanner();
-	
+				this.panner = this.ac.createStereoPanner();
+
+				this.pitchShift = PitchShift(this.ac);
+				var pitchValue = playlist.pitch + playlist.speedPitch
+				this.pitchShift.transpose = pitchValue;
+				// console.log(pitchValue)
+	      // this.pitchShift.wet.value = 1;
+				// this.pitchShift.dry.value = 0;
+				
+
+				// this.oscillator = this.ac.createOscillator();
+				// console.log(this.oscillator);
+				// console.log(this.panner);
+				
+				// this.analyser = this.ac.createAnalyser();
+				// this.distortion = this.ac.createWaveShaper();
+				// this.biquadFilter = this.ac.createBiquadFilter();
+				// this.convolver = this.ac.createConvolver();
+				// this.oscillator.detune.setValueAtTime(153600, this.ac.currentTime);
+				// this.oscillator.connect(this.destination)
+				// this.oscillator.start()
 	      this.source.connect(this.fadeGain);
 	      this.fadeGain.connect(this.volumeGain);
 	      this.volumeGain.connect(this.shouldPlayGain);
-	      this.shouldPlayGain.connect(this.masterGain);
-	      this.masterGain.connect(this.panner);
-	      this.panner.connect(this.destination);
-	
+				this.shouldPlayGain.connect(this.masterGain);
+				if(!pitchValue){
+					this.masterGain.connect(this.panner);
+				} else {
+					this.masterGain.connect(this.pitchShift);
+					this.pitchShift.connect(this.panner);
+				}
+				// this.analyser.connect(this.distortion);
+				// this.distortion.connect(this.biquadFilter);
+				// this.biquadFilter.connect(this.panner);
+				this.panner.connect(this.destination);
+				// this.oscillator.start();
+				// this.biquadFilter.frequency.value = 24000;
+				// this.biquadFilter.detune.value = 5000;
+				// this.biquadFilter.Q.value = 3;
+				// console.log('test', this)
+
+				// var pitchShift = new Tone.PitchShift({
+				// 	pitch: -5
+				// }).toDestination();
+				// console.log(pitchShift)
+				// console.log(this)
+				// this.source.connect(pitchShift);
+
+
 	      return sourcePromise;
 	    }
 	  }, {
@@ -8237,8 +8285,18 @@ var WaveformPlaylist =
 		}, {
 	    key: 'play',
 	    value: function play(when, start, duration, speed) {
+				// var oscillator = this.source.context.createOscillator();
+				// oscillator.frequency.setValueAtTime(440, this.source.context.currentTime);
+				// oscillator.connect(this.source.context.destination);
+				// oscillator.start()
+				// var biquadFilter = this.source.context.createBiquadFilter();
+				// biquadFilter.connect(this.source.context.destination);
+				// biquadFilter.frequency.setValueAtTime(1000, this.source.context.currentTime);
 				this.source.start(when, start, duration);
 				this.source.playbackRate.value = speed;
+				// this.source.listener.dopplerFactor = 1000;
+				// this.source.detune.value = -300;
+				// console.log(this.source)
 	    }
 	  }, {
 	    key: 'stop',
@@ -9033,7 +9091,7 @@ var WaveformPlaylist =
 	        {
 	          throw new Error('Unknown export worker command');
 	        }
-	    }
+	    } 
 	  };
 	};
 
