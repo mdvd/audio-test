@@ -239,7 +239,6 @@ function PitchShift(audioContext){
 	  Object.defineProperty(node, 'transpose', {
 	    set: function(value){
 				transpose = getMultiplier(value)
-				console.log('transpose', transpose)
 	      instance.setPitchOffset(transpose)
 	    },
 	    get: function(){

@@ -231,11 +231,11 @@ $container.on("click", ".btn-exponential", function() {
 
 //zoom buttons
 $container.on("click", ".btn-zoom-in", function() {
-  ee.emit("zoomin");
+  ee.emit("zoomin", 0.25);
 });
 
 $container.on("click", ".btn-zoom-out", function() {
-  ee.emit("zoomout");
+  ee.emit("zoomout", 0.25);
 });
 
 $container.on("click", ".btn-trim-audio", function() {
@@ -299,13 +299,16 @@ $container.on("input change", ".master-gain", function(e){
 
 $container.on("input change", ".master-pitch", function(e){
   pitchValue.innerHTML = e.target.value;
-  // ee.emit("pitchchange", e.target.value);
   playlist.pitchChange = false;
   playlist.pitch = +e.target.value;
 
   if(playlist.isPlaying()){
     playlist.pitchChange = true;
-    ee.emit("play");
+    if(isLooping){
+      playoutPromises = playlist.play(playlist.timeSelection.start, playlist.timeSelection.end);
+    } else {
+      ee.emit("play");
+    }
   }
 });
 function getBaseLog(x, y) {
@@ -313,14 +316,18 @@ function getBaseLog(x, y) {
 }
 $container.on("input change", ".master-speed", function(e){
   speedValue.innerHTML = e.target.value;
-  // ee.emit("pitchchange", e.target.value);
   playlist.speedChange = false;
   playlist.playSpeed = e.target.value;
   playlist.speedPitch = -1 * 12 * getBaseLog(2, e.target.value);
 
   if(playlist.isPlaying()){
     playlist.speedChange = true;
-    ee.emit("play");
+    if(isLooping){
+      console.log('testtest')
+      playoutPromises = playlist.play(playlist.timeSelection.start, playlist.timeSelection.end);
+    } else {
+      ee.emit("play");
+    }
   }
 });
 
