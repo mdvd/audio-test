@@ -137,7 +137,7 @@ $container.on("keypress", function(event) {
   if(event.keyCode === 32){
     event.preventDefault()
     if(!playlist.isPlaying()){
-      playlist.playSpeed === 1 ? ee.emit("play") : ee.emit("play-slow");
+      ee.emit("play");
     } else {
       ee.emit("pause");
     }
@@ -238,6 +238,10 @@ $container.on("click", ".btn-zoom-out", function() {
   ee.emit("zoomout", 0.25);
 });
 
+$container.on("click", ".btn-zoom-default", function() {
+  ee.emit("zoomDefault");
+});
+
 $container.on("click", ".btn-trim-audio", function() {
   ee.emit("trim");
 });
@@ -317,13 +321,12 @@ function getBaseLog(x, y) {
 $container.on("input change", ".master-speed", function(e){
   speedValue.innerHTML = e.target.value;
   playlist.speedChange = false;
-  playlist.playSpeed = e.target.value;
+  playlist.playSpeed = +e.target.value;
   playlist.speedPitch = -1 * 12 * getBaseLog(2, e.target.value);
 
   if(playlist.isPlaying()){
     playlist.speedChange = true;
     if(isLooping){
-      console.log('testtest')
       playoutPromises = playlist.play(playlist.timeSelection.start, playlist.timeSelection.end);
     } else {
       ee.emit("play");

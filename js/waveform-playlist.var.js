@@ -152,6 +152,7 @@ var WaveformPlaylist =
 		playlist.linkedEndpoints = config.linkedEndpoints;
 		playlist.startLoop = 0;
 		playlist.endLoop = 0;
+		playlist.defaultZoomSize = 0;
 		playlist.channelWrapperWidth = Math.round(document.querySelector('#playlist').getBoundingClientRect().width - options.controls.width);
 	
 	  // take care of initial virtual dom rendering.
@@ -2003,6 +2004,17 @@ var WaveformPlaylist =
 	        // var zoomIndex = Math.max(0, _this2.zoomIndex - 1);
 	        // var zoom = _this2.zoomLevels[zoomIndex];
 					var zoom = _this2.zoomLevels[0] * (1 - step)
+					if(zoom < playlist.defaultZoomSize / 10){
+						zoom = playlist.defaultZoomSize / 10
+					}
+	        if (zoom !== _this2.samplesPerPixel) {
+	          _this2.setZoom(zoom);
+	          _this2.drawRequest();
+	        }
+				});
+				
+				ee.on('zoomDefault', function () {
+					var zoom = playlist.defaultZoomSize
 	        if (zoom !== _this2.samplesPerPixel) {
 	          _this2.setZoom(zoom);
 	          _this2.drawRequest();
@@ -2013,6 +2025,9 @@ var WaveformPlaylist =
 	        // var zoomIndex = Math.min(_this2.zoomLevels.length - 1, _this2.zoomIndex + 1);
 	        // var zoom = _this2.zoomLevels[zoomIndex];
 					var zoom = _this2.zoomLevels[0] * (1 + step)
+					if(zoom > playlist.defaultZoomSize){
+						zoom = playlist.defaultZoomSize
+					}
 	        if (zoom !== _this2.samplesPerPixel) {
 	          _this2.setZoom(zoom);
 	          _this2.drawRequest();
@@ -2112,9 +2127,10 @@ var WaveformPlaylist =
 	
 	        _this3.tracks = _this3.tracks.concat(tracks);
 					_this3.adjustDuration();
-					_this3.setSamplesPerPixel((0, _conversions.secondsToSamples)(_this3.duration, _this3.sampleRate) / _this3.channelWrapperWidth)
-					_this3.setZoomLevels([(0, _conversions.secondsToSamples)(_this3.duration, _this3.sampleRate) / _this3.channelWrapperWidth])
-					_this3.setZoom((0, _conversions.secondsToSamples)(_this3.duration, _this3.sampleRate) / _this3.channelWrapperWidth)
+					_this3.setSamplesPerPixel((0, _conversions.secondsToSamples)(_this3.duration, _this3.sampleRate) / (_this3.channelWrapperWidth - 18))
+					_this3.setZoomLevels([(0, _conversions.secondsToSamples)(_this3.duration, _this3.sampleRate) / (_this3.channelWrapperWidth - 18)])
+					_this3.setZoom((0, _conversions.secondsToSamples)(_this3.duration, _this3.sampleRate) / (_this3.channelWrapperWidth - 18))
+					playlist.defaultZoomSize = (0, _conversions.secondsToSamples)(_this3.duration, _this3.sampleRate) / (_this3.channelWrapperWidth - 18)
 	        _this3.draw(_this3.render());
 	        _this3.ee.emit('audiosourcesrendered');
 	      }).catch(function (e) {
@@ -2398,7 +2414,7 @@ var WaveformPlaylist =
 	      }
 	
 	      this.tracks.forEach(function (track) {
-	        track.setState('cursor');
+					track.setState('cursor');
 	        playoutPromises.push(track.schedulePlay(currentTime, start, end, {
 	          shouldPlay: _this7.shouldTrackPlay(track),
 	          masterGain: _this7.masterGain
@@ -5954,7 +5970,7 @@ var WaveformPlaylist =
 	
 	      if (this.stateObj) {
 	        this.stateObj.setup(data.resolution, data.sampleRate);
-	        var StateClass = _states2.default[this.state];
+					var StateClass = _states2.default[this.state];
 	        var events = StateClass.getEvents();
 	        events.forEach(function (event) {
 	          config['on' + event] = _this.stateObj[event].bind(_this.stateObj);
@@ -6149,8 +6165,10 @@ var WaveformPlaylist =
 						channelContainerNode.scrollLeft = channelPosition
 					}
 				}
-				if(progressWidth === cEndX && channelContainerNode.scrollLeft > cStartX){
-					cStartX > 30 && channelContainerNode.scrollLeft > cStartX ? channelContainerNode.scrollLeft = cStartX - 30 : channelContainerNode.scrollLeft = 0
+				if(progressWidth === cEndX && channelContainerNode.scrollLeft > cStartX && cStartX > 30){
+					channelContainerNode.scrollLeft = cStartX - 30
+
+					// cStartX > 30 && channelContainerNode.scrollLeft > cStartX ? channelContainerNode.scrollLeft = cStartX - 30 : channelContainerNode.scrollLeft = 0
 				}
 	      var waveform = (0, _h2.default)('div.waveform', {
 	        attributes: {
@@ -7354,7 +7372,15 @@ var WaveformPlaylist =
 	  function _class(track) {
 	    _classCallCheck(this, _class);
 	
-	    this.track = track;
+			this.track = track;
+			this.active = false;
+			this.startMove = false;
+			this.endMove = false;
+			this.touchStartTime = 0;
+			this.startX = playlist.startLoop;
+			this.endX = playlist.endLoop;
+			this.touchResizeX = 0;
+			this.touchResizeY = 0;
 	  }
 	
 	  _createClass(_class, [{
@@ -7379,7 +7405,71 @@ var WaveformPlaylist =
 				}
 	      
 	    }
-	  }], [{
+	  }, {
+			key: 'touchstart',
+	    value: function touchstart(e) {
+				if(e.touches && e.touches.length > 1){
+					e.preventDefault();
+					e.stopPropagation();
+					let resizeX = Math.abs(e.touches[0].clientX - e.touches[1].clientX);
+					let resizeY = Math.abs(e.touches[0].clientY - e.touches[1].clientY);
+					playlist.tracks.forEach((track) => {
+						var a = track.stateObj;
+						a.touchResizeX = resizeX;
+						a.touchResizeY = resizeY;
+					})
+				}
+			}
+		}, {
+			key: 'touchmove',
+	    value: function touchmove(e) {
+				if(e.touches && e.touches.length > 1){
+					e.preventDefault();
+					e.stopPropagation();
+					let resizeX = Math.abs(e.touches[0].clientX - e.touches[1].clientX);
+					let resizeY = Math.abs(e.touches[0].clientY - e.touches[1].clientY);
+					if(resizeX > this.touchResizeX || resizeY > this.touchResizeY) {
+						playlist.ee.emit("zoomin", 0.1)
+					}
+					if(resizeX < this.touchResizeX || resizeY < this.touchResizeY) {
+						playlist.ee.emit("zoomout", 0.1)
+					}
+					playlist.tracks.forEach((track) => {
+						var a = track.stateObj;
+						a.touchResizeX = resizeX;
+						a.touchResizeY = resizeY;
+					})
+				}
+			}
+		}, {
+			key: 'wheel',
+			value: function wheel(e) {
+				if(e.deltaY < 0) {
+					e.preventDefault()
+					if(e.deltaY === -125) {
+						playlist.ee.emit("zoomout", 0.1)
+					} else {
+						playlist.ee.emit("zoomin", 0.1)
+					}
+				}
+				if(e.deltaY > 0) {
+					e.preventDefault()
+					if(e.deltaY === 125) {
+						playlist.ee.emit("zoomin", 0.1)
+					} else {
+						playlist.ee.emit("zoomout", 0.1)
+					}
+				}
+				
+				playlist.startLoop = (0, _conversions.secondsToPixels)(playlist.timeSelection.start, playlist.samplesPerPixel, playlist.sampleRate);
+				playlist.endLoop = (0, _conversions.secondsToPixels)(playlist.timeSelection.end, playlist.samplesPerPixel, playlist.sampleRate);
+				playlist.tracks.forEach((track) => {
+					var a = track.stateObj;
+					a.startX = playlist.startLoop
+					a.endX = playlist.endLoop
+				})
+			}
+		}], [{
 	    key: 'getClass',
 	    value: function getClass() {
 	      return '.state-cursor';
@@ -7387,7 +7477,7 @@ var WaveformPlaylist =
 	  }, {
 	    key: 'getEvents',
 	    value: function getEvents() {
-	      return ['click'];
+	      return ['click', 'wheel', 'touchstart', 'touchmove'];
 	    }
 	  }]);
 
@@ -7523,7 +7613,6 @@ var WaveformPlaylist =
 						a.touchResizeY = resizeY;
 					})
 				} else {
-					console.log('touchmove', e)
 					var d = new Date()
 					var presstime = d.getTime() - this.touchStartTime
 					if (presstime > 500) {
@@ -7664,12 +7753,21 @@ var WaveformPlaylist =
 		}, {
 	    key: 'wheel',
 	    value: function wheel(e) {
-				e.preventDefault()
 				if(e.deltaY < 0) {
-					playlist.ee.emit("zoomout", 0.1)
+				e.preventDefault()
+					if(e.deltaY === -125) {
+						playlist.ee.emit("zoomout", 0.1)
+					} else {
+						playlist.ee.emit("zoomin", 0.1)
+					}
 				}
 				if(e.deltaY > 0) {
-					playlist.ee.emit("zoomin", 0.1)
+				e.preventDefault()
+					if(e.deltaY === 125) {
+						playlist.ee.emit("zoomin", 0.1)
+					} else {
+						playlist.ee.emit("zoomout", 0.1)
+					}
 				}
 				
 				playlist.startLoop = (0, _conversions.secondsToPixels)(playlist.timeSelection.start, playlist.samplesPerPixel, playlist.sampleRate);
@@ -8232,22 +8330,21 @@ var WaveformPlaylist =
 	      var sourcePromise = new Promise(function (resolve) {
 	        // keep track of the buffer state.
 	        _this.source.onended = function () {
-	          _this.source.disconnect();
-	          _this.fadeGain.disconnect();
-	          _this.volumeGain.disconnect();
-	          _this.shouldPlayGain.disconnect();
-	          _this.pitchShift.disconnect();
-	          _this.panner.disconnect();
-	          _this.masterGain.disconnect();
-	
-	          _this.source = undefined;
-	          _this.fadeGain = undefined;
-	          _this.volumeGain = undefined;
-	          _this.shouldPlayGain = undefined;
-	          _this.pitchShift = undefined;
-	          _this.panner = undefined;
-	          _this.masterGain = undefined;
-	
+							_this.source.disconnect();
+							_this.fadeGain.disconnect();
+							_this.volumeGain.disconnect();
+							_this.shouldPlayGain.disconnect();
+							_this.pitchShift.disconnect();
+							_this.panner.disconnect();
+							_this.masterGain.disconnect();
+		
+							_this.source = undefined;
+							_this.fadeGain = undefined;
+							_this.volumeGain = undefined;
+							_this.shouldPlayGain = undefined;
+							_this.pitchShift = undefined;
+							_this.panner = undefined;
+							_this.masterGain = undefined;
 	          resolve();
 	        };
 				});
