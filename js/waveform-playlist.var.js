@@ -6167,8 +6167,7 @@ var WaveformPlaylist =
 						channelContainerNode.scrollLeft = channelPosition
 					}
 				}
-				
-				if(playlist.playbackSeconds.toFixed(1) === playlist.timeSelection.end.toFixed(1)){  //progressWidth === cEndX || progressWidth + 1 === cEndX || progressWidth + 2 === cEndX
+				if(Math.round(playlist.playbackSeconds * 10) / 10 === Math.round(playlist.timeSelection.end * 10) / 10){  //progressWidth === cEndX || progressWidth + 1 === cEndX || progressWidth + 2 === cEndX
 					// channelContainerNode.scrollLeft = cStartX - 30
 					cStartX > 30 && channelContainerNode.scrollLeft > cStartX ? channelContainerNode.scrollLeft = cStartX - 30 : channelContainerNode.scrollLeft = 0
 				}
