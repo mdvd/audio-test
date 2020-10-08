@@ -2389,21 +2389,24 @@ var WaveformPlaylist =
 				var _this7 = this;
 				var speed = this.playSpeed;
 	      clearTimeout(this.resetDrawTimer);
-	
 	      var currentTime = this.ac.currentTime;
 	      var selected = this.getTimeSelection();
 	      var playoutPromises = [];
 				
 				var start = this.pausedAt || selected.start || startTime || this.cursor;
-				if(selected.end !== selected.start && this.pausedAt > selected.end || this.pausedAt < selected.start){
+				if(selected.end !== selected.start || playlist.endLoop > playlist.startLoop){ //&& this.pausedAt > selected.end || this.pausedAt < selected.start
 					start = selected.start
 				}
 				if(playlist.pitchChange || playlist.speedChange){
-					start = playlist.playbackSeconds;
+					if(selected.end !== selected.start || playlist.endLoop > playlist.startLoop){
+						start = selected.start
+					} else {
+						start = playlist.playbackSeconds;
+					}
 				}
-				if(playlist.endLoop > playlist.startLoop){
-					start = selected.start
-				}
+				// if(playlist.endLoop > playlist.startLoop){
+				// 	start = selected.start
+				// }
 				this.pausedAt = undefined;
 	      var end = endTime;
 	      if (!end && selected.end !== selected.start && selected.end > start) {
@@ -5281,7 +5284,6 @@ var WaveformPlaylist =
 	
 	        if (playlist.isAutomaticScroll && node.querySelector('.cursor')) {
 						var rect = node.getBoundingClientRect();
-						// console.log('rect', rect)
 						var cursorRect = node.querySelector('.cursor').getBoundingClientRect();
 						var controlWidth = playlist.controls.show ? playlist.controls.width : 0;
 	          if (cursorRect.right > rect.right || cursorRect.right < 0) {
@@ -5902,7 +5904,7 @@ var WaveformPlaylist =
 	
 	      start += this.cueIn;
 	      var relPos = startTime - this.startTime;
-	      var sourcePromise = playoutSystem.setUpSource();
+				var sourcePromise = playoutSystem.setUpSource();
 	
 	      // param relPos: cursor position in seconds relative to this track.
 	      // can be negative if the cursor is placed before the start of this track etc.
@@ -6039,9 +6041,9 @@ var WaveformPlaylist =
 	    value: function render(data) {
 	      var _this3 = this;
 				var width = this.peaks.length;
-	      var playbackX = (0, _conversions.secondsToPixels)(data.playbackSeconds, data.resolution, data.sampleRate);
-	      var startX = (0, _conversions.secondsToPixels)(this.startTime, data.resolution, data.sampleRate);
-	      var endX = (0, _conversions.secondsToPixels)(this.endTime, data.resolution, data.sampleRate);
+	      var playbackX = (0, _conversions.secondsToPixels)(data.playbackSeconds, playlist.samplesPerPixel, data.sampleRate);
+	      var startX = (0, _conversions.secondsToPixels)(this.startTime, playlist.samplesPerPixel, data.sampleRate);
+				var endX = (0, _conversions.secondsToPixels)(this.endTime, playlist.samplesPerPixel, data.sampleRate);
 	      var progressWidth = 0;
 	      var numChan = this.peaks.data.length;
 				var scale = window.devicePixelRatio;
@@ -6146,8 +6148,8 @@ var WaveformPlaylist =
 	      waveformChildren.push(this.renderOverlay(data));
 	
 	      // draw cursor selection on active track.
-				var cStartX = (0, _conversions.secondsToPixels)(data.timeSelection.start, data.resolution, data.sampleRate);
-				var cEndX = (0, _conversions.secondsToPixels)(data.timeSelection.end, data.resolution, data.sampleRate);
+				var cStartX = (0, _conversions.secondsToPixels)(data.timeSelection.start, playlist.samplesPerPixel, data.sampleRate);
+				var cEndX = (0, _conversions.secondsToPixels)(data.timeSelection.end, playlist.samplesPerPixel, data.sampleRate);
 				var cWidth = cEndX - cStartX + 1;
 				var cClassName = cWidth > 1 ? '.segment' : '.point';
 
@@ -6165,10 +6167,10 @@ var WaveformPlaylist =
 						channelContainerNode.scrollLeft = channelPosition
 					}
 				}
-				if(progressWidth === cEndX && channelContainerNode.scrollLeft > cStartX && cStartX > 30){
-					channelContainerNode.scrollLeft = cStartX - 30
-
-					// cStartX > 30 && channelContainerNode.scrollLeft > cStartX ? channelContainerNode.scrollLeft = cStartX - 30 : channelContainerNode.scrollLeft = 0
+				
+				if(playlist.playbackSeconds.toFixed(1) === playlist.timeSelection.end.toFixed(1)){  //progressWidth === cEndX || progressWidth + 1 === cEndX || progressWidth + 2 === cEndX
+					// channelContainerNode.scrollLeft = cStartX - 30
+					cStartX > 30 && channelContainerNode.scrollLeft > cStartX ? channelContainerNode.scrollLeft = cStartX - 30 : channelContainerNode.scrollLeft = 0
 				}
 	      var waveform = (0, _h2.default)('div.waveform', {
 	        attributes: {
@@ -7395,6 +7397,7 @@ var WaveformPlaylist =
 				if(e.target.className === 'fa fa-repeat' || e.target.className === 'btn btn-default btn-loop btn-loop-success active-btn' || e.target.className === 'btn btn-default btn-loop btn-loop-success'){
 				} else{
 					e.preventDefault();
+					isLooping = false
 					playlist.startLoop = 0;
 					playlist.endLoop = 0;
 					var startX = e.offsetX;
@@ -7445,19 +7448,19 @@ var WaveformPlaylist =
 			key: 'wheel',
 			value: function wheel(e) {
 				if(e.deltaY < 0) {
-					e.preventDefault()
 					if(e.deltaY === -125) {
+						e.preventDefault()
 						playlist.ee.emit("zoomout", 0.1)
 					} else {
-						playlist.ee.emit("zoomin", 0.1)
+						// playlist.ee.emit("zoomin", 0.1)
 					}
 				}
 				if(e.deltaY > 0) {
-					e.preventDefault()
 					if(e.deltaY === 125) {
+						e.preventDefault()
 						playlist.ee.emit("zoomin", 0.1)
 					} else {
-						playlist.ee.emit("zoomout", 0.1)
+						// playlist.ee.emit("zoomout", 0.1)
 					}
 				}
 				
@@ -7688,6 +7691,7 @@ var WaveformPlaylist =
 				} else {
 					e.preventDefault();
 					playlist.tracks.forEach((track) => {
+						isLooping = false
 						var a = track.stateObj;
 						a.active = true;
 						a.startX = e.offsetX;
@@ -7754,19 +7758,19 @@ var WaveformPlaylist =
 	    key: 'wheel',
 	    value: function wheel(e) {
 				if(e.deltaY < 0) {
-				e.preventDefault()
 					if(e.deltaY === -125) {
+						e.preventDefault()
 						playlist.ee.emit("zoomout", 0.1)
 					} else {
-						playlist.ee.emit("zoomin", 0.1)
+						// playlist.ee.emit("zoomin", 0.1)
 					}
 				}
 				if(e.deltaY > 0) {
-				e.preventDefault()
 					if(e.deltaY === 125) {
+						e.preventDefault()
 						playlist.ee.emit("zoomin", 0.1)
 					} else {
-						playlist.ee.emit("zoomout", 0.1)
+						// playlist.ee.emit("zoomout", 0.1)
 					}
 				}
 				
@@ -8324,29 +8328,30 @@ var WaveformPlaylist =
 	  }, {
 	    key: 'setUpSource',
 	    value: function setUpSource() {
-	      var _this = this;
+	      const _this = this;
 	      this.source = this.ac.createBufferSource();
 				this.source.buffer = this.buffer;
-	      var sourcePromise = new Promise(function (resolve) {
-	        // keep track of the buffer state.
-	        _this.source.onended = function () {
-							_this.source.disconnect();
-							_this.fadeGain.disconnect();
-							_this.volumeGain.disconnect();
-							_this.shouldPlayGain.disconnect();
-							_this.pitchShift.disconnect();
-							_this.panner.disconnect();
-							_this.masterGain.disconnect();
-		
-							_this.source = undefined;
-							_this.fadeGain = undefined;
-							_this.volumeGain = undefined;
-							_this.shouldPlayGain = undefined;
-							_this.pitchShift = undefined;
-							_this.panner = undefined;
-							_this.masterGain = undefined;
-	          resolve();
-	        };
+	      const sourcePromise = new Promise(function (resolve) {
+					// keep track of the buffer state.
+					_this.source.onended = function () {
+						_this.source.disconnect();
+						_this.fadeGain.disconnect();
+						_this.volumeGain.disconnect();
+						_this.shouldPlayGain.disconnect();
+						_this.pitchShift.disconnect();
+						_this.panner.disconnect();
+						_this.masterGain.disconnect();
+	
+						_this.source = undefined;
+						_this.fadeGain = undefined;
+						_this.volumeGain = undefined;
+						_this.shouldPlayGain = undefined;
+						_this.pitchShift = undefined;
+						_this.panner = undefined;
+						_this.masterGain = undefined;
+						resolve();
+					};
+	        
 				});
 	
 	      this.fadeGain = this.ac.createGain();
@@ -8359,12 +8364,13 @@ var WaveformPlaylist =
 				this.panner = this.ac.createStereoPanner();
 
 				this.pitchShift = PitchShift(this.ac);
-				var pitchValue = playlist.pitch + playlist.speedPitch
+				var pitchValue = playlist.pitch + playlist.speedPitch;
 				this.pitchShift.transpose = pitchValue;
 	      this.source.connect(this.fadeGain);
 	      this.fadeGain.connect(this.volumeGain);
 	      this.volumeGain.connect(this.shouldPlayGain);
 				this.shouldPlayGain.connect(this.masterGain);
+				
 				if(!pitchValue){
 					this.masterGain.connect(this.panner);
 				} else {
@@ -8421,6 +8427,9 @@ var WaveformPlaylist =
 		}, {
 	    key: 'play',
 	    value: function play(when, start, duration, speed) {
+				if(duration < 0) {
+					duration = 0
+				}
 				this.source.start(when, start, duration);
 				this.source.playbackRate.value = speed;
 	    }

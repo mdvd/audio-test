@@ -301,7 +301,7 @@ $container.on("input change", ".master-gain", function(e){
   ee.emit("mastervolumechange", e.target.value);
 });
 
-$container.on("input change", ".master-pitch", function(e){
+$container.on("change", ".master-pitch", function(e){
   pitchValue.innerHTML = e.target.value;
   playlist.pitchChange = false;
   playlist.pitch = +e.target.value;
@@ -318,7 +318,7 @@ $container.on("input change", ".master-pitch", function(e){
 function getBaseLog(x, y) {
   return Math.log(y) / Math.log(x);
 }
-$container.on("input change", ".master-speed", function(e){
+$container.on("change", ".master-speed", function(e){
   speedValue.innerHTML = e.target.value;
   playlist.speedChange = false;
   playlist.playSpeed = +e.target.value;
