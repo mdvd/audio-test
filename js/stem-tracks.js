@@ -1,4 +1,35 @@
-var playlist = WaveformPlaylist.init({
+var userMediaStream;
+var playlist;
+var constraints = { audio: true };
+
+navigator.getUserMedia = (navigator.getUserMedia ||
+  navigator.webkitGetUserMedia ||
+  navigator.mozGetUserMedia ||
+  navigator.msGetUserMedia);
+
+function gotStream(stream) {
+  userMediaStream = stream;
+  playlist.initRecorder(userMediaStream);
+  $(".btn-record").removeClass("disabled");
+}
+
+function logError(err) {
+  console.error(err);
+}
+
+if (navigator.mediaDevices) {
+  navigator.mediaDevices.getUserMedia(constraints)
+  .then(gotStream)
+  .catch(logError);
+} else if (navigator.getUserMedia && 'MediaRecorder' in window) {
+  navigator.getUserMedia(
+    constraints,
+    gotStream,
+    logError
+  );
+}
+
+playlist = WaveformPlaylist.init({
   // samplesPerPixel: 1000,
   waveHeight: 100,
   container: document.getElementById("playlist"),
@@ -10,7 +41,7 @@ var playlist = WaveformPlaylist.init({
   controls: {
     show: true, //whether or not to include the track controls
     width: 200 //width of controls in pixels
-  },
+  }
   // zoomLevels: [500, 1000, 3000, 5000]
 });
 
@@ -52,3 +83,4 @@ playlist.load([
   
 });
 
+playlist.initExporter();

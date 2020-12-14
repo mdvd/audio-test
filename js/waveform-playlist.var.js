@@ -150,6 +150,8 @@ var WaveformPlaylist =
 	  playlist.isAutomaticScroll = config.isAutomaticScroll;
 	  playlist.isContinuousPlay = config.isContinuousPlay;
 		playlist.linkedEndpoints = config.linkedEndpoints;
+		playlist.isRecording = false;
+		playlist.trackRecord = null;
 		playlist.startLoop = 0;
 		playlist.endLoop = 0;
 		playlist.defaultZoomSize = 0;
@@ -1738,30 +1740,31 @@ var WaveformPlaylist =
 	  }, {
 	    key: 'initRecorder',
 	    value: function initRecorder(stream) {
-	      var _this = this;
+				var _this = this;
 	
-	      this.mediaRecorder = new window.MediaRecorder(stream);
+				this.mediaRecorder = new window.MediaRecorder(stream);
 	
 	      this.mediaRecorder.onstart = function () {
+					playlist.isRecording = true
 	        var track = new _Track2.default();
 	        track.setName('Recording');
 	        track.setEnabledStates();
-	        track.setEventEmitter(_this.ee);
-	
+					track.setEventEmitter(_this.ee);
+					track.type = 'record';
+					track.startTime = _this.cursor;
 	        _this.recordingTrack = track;
-	        _this.tracks.push(track);
+	        _this.tracks.unshift(track);
 	
-	        _this.chunks = [];
+					_this.chunks = [];
 	        _this.working = false;
 	      };
 	
 	      this.mediaRecorder.ondataavailable = function (e) {
 	        _this.chunks.push(e.data);
-	
 	        // throttle peaks calculation
 	        if (!_this.working) {
-	          var recording = new Blob(_this.chunks, { type: 'audio/ogg; codecs=opus' });
-	          var loader = _LoaderFactory2.default.createLoader(recording, _this.ac);
+						var recording = new Blob(_this.chunks, { type: 'audio/ogg; codecs=opus' });
+						var loader = _LoaderFactory2.default.createLoader(recording, _this.ac);
 	          loader.load().then(function (audioBuffer) {
 	            // ask web worker for peaks.
 	            _this.recorderWorker.postMessage({
@@ -1770,9 +1773,10 @@ var WaveformPlaylist =
 	            });
 	            _this.recordingTrack.setCues(0, audioBuffer.duration);
 	            _this.recordingTrack.setBuffer(audioBuffer);
-	            _this.recordingTrack.setPlayout(new _Playout2.default(_this.ac, audioBuffer));
+							_this.recordingTrack.setPlayout(new _Playout2.default(_this.ac, audioBuffer));
 							_this.adjustDuration();
 	          }).catch(function () {
+
 	            _this.working = false;
 	          });
 	          _this.working = true;
@@ -1780,6 +1784,7 @@ var WaveformPlaylist =
 	      };
 	
 	      this.mediaRecorder.onstop = function () {
+					playlist.isRecording = false
 	        _this.chunks = [];
 	        _this.working = false;
 	      };
@@ -1906,8 +1911,8 @@ var WaveformPlaylist =
 	        _this2.drawRequest();
 	      });
 	
-	      ee.on('record', function () {
-	        _this2.record();
+	      ee.on('record', function (track) {
+	        _this2.record(track);
 	      });
 				
 				// ee.on('play-slow', function (start, end) {
@@ -1951,6 +1956,11 @@ var WaveformPlaylist =
 	        _this2.muteTrack(track);
 	        _this2.adjustTrackPlayout();
 	        _this2.drawRequest();
+				});
+				
+				ee.on('delete', function (track) {
+					playlist.tracks = _this2.tracks.filter(item => item !== track)
+					playlist.drawRequest()
 	      });
 	
 	      ee.on('volumechange', function (volume, track) {
@@ -2172,8 +2182,7 @@ var WaveformPlaylist =
 	        start: start,
 	        end: end === undefined ? start : end
 	      };
-	
-	      this.cursor = start;
+	      this.cursor = Math.round(start * 100) / 100;
 	    }
 	  }, {
 	    key: 'startOfflineRender',
@@ -2519,7 +2528,7 @@ var WaveformPlaylist =
 	      var _this12 = this;
 	
 	      var playoutPromises = [];
-	      this.mediaRecorder.start(300);
+	      this.mediaRecorder.start(100);
 	
 	      this.tracks.forEach(function (track) {
 	        track.setState('none');
@@ -6009,7 +6018,55 @@ var WaveformPlaylist =
 	
 	      var muteClass = data.muted ? '.active' : '';
 	      var soloClass = data.soloed ? '.active' : '';
-	      var numChan = this.peaks.data.length;
+				var numChan = this.peaks.data.length;
+
+				if(this.type) {
+					return (0, _h2.default)('div.controls', {
+						attributes: {
+							style: 'height: ' + numChan * data.height + 'px; width: ' + data.controls.width + 'px; position: absolute; left: 0; z-index: 10;'
+						}
+						// ,
+						// onclick: function onclick(ev) {
+						// 	if(ev.target.className === 'controls' || ev.target.localName === 'header'){
+						// 		console.log('click_controls', ev)
+						// 		console.log('target_parent', ev.target.parentElement)
+						// 	}
+						// }
+					}, [(0, _h2.default)('header', [this.name]), (0, _h2.default)('div.btn-group', [(0, _h2.default)('span.btn.btn-default.btn-xs.btn-mute' + muteClass, {
+						onclick: function onclick() {
+							_this2.ee.emit('mute', _this2);
+						}
+					}, ['Mute']), (0, _h2.default)('span.btn.btn-default.btn-xs.btn-solo' + soloClass, {
+						onclick: function onclick() {
+							_this2.ee.emit('solo', _this2);
+						}
+					}, ['Solo']),
+					(0, _h2.default)('span.btn.btn-default.btn-xs.btn-rec.btn-danger', {
+						onclick: function onclick(event) {
+							playlist.trackRecord = _this2;
+							_this2.ee.emit('record')
+						}
+					}, ['Rec']),
+					(0, _h2.default)('span.btn.btn-default.btn-xs.btn-dlt.btn-danger', {
+						onclick: function onclick(event) {
+							let isDelete = confirm('Вы действительно хотите удалить запись?')
+							if(isDelete){
+								_this2.ee.emit('delete', _this2);
+							}
+						}
+					}, ['Delete'])]), (0, _h2.default)('label', [(0, _h2.default)('input.volume-slider', {
+						attributes: {
+							type: 'range',
+							min: 0,
+							max: 100,
+							value: 100
+						},
+						hook: new _VolumeSliderHook2.default(this.gain),
+						oninput: function oninput(e) {
+							_this2.ee.emit('volumechange', e.target.value, _this2);
+						}
+					})])]);
+				}
 	
 	      return (0, _h2.default)('div.controls', {
 	        attributes: {
@@ -8430,7 +8487,7 @@ var WaveformPlaylist =
 					duration = 0
 				}
 				this.source.start(when, start, duration);
-				this.source.playbackRate.value = speed;
+				this.source.playbackRate.value = playlist.playSpeed;
 	    }
 	  }, {
 	    key: 'stop',
@@ -9119,6 +9176,7 @@ var WaveformPlaylist =
 	  }
 	
 	  function encodeWAV(samples) {
+			console.log('samples', samples)
 	    var mono = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
 	
 	    var buffer = new ArrayBuffer(44 + samples.length * 2);
@@ -9184,6 +9242,7 @@ var WaveformPlaylist =
 	  }
 	
 	  function exportWAV(type) {
+			console.log('wxport_wav_type', recLength)
 	    var bufferL = mergeBuffers(recBuffersL, recLength);
 	    var bufferR = mergeBuffers(recBuffersR, recLength);
 			var interleaved = interleave(bufferL, bufferR);

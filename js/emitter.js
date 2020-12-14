@@ -154,8 +154,11 @@ $container.on("click", ".btn-play-slow", function() {
 });
 
 $container.on("click", ".btn-pause", function() {
-  // isLooping = false;
-  ee.emit("pause");
+  if(playlist.isRecording){
+    ee.emit("stop")
+  } else {
+    ee.emit("pause");
+  }
 });
 
 $container.on("click", ".btn-stop", function() {
@@ -179,7 +182,21 @@ $container.on("click", ".btn-clear", function() {
 });
 
 $container.on("click", ".btn-record", function() {
-  ee.emit("record");
+  if(playlist.isRecording){
+    ee.emit("stop")
+  } else {
+    let recordingTracks = []
+    playlist.tracks.forEach(track => {
+      if(track.type === 'record') {
+        recordingTracks.push(track)
+      }
+    })
+    if(recordingTracks.length > 9) {
+      alert('Максимально можно сделать до 10 записей.')
+    } else {
+      ee.emit("record");
+    }
+  }
 });
 
 //track interaction states
